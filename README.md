@@ -1,7 +1,8 @@
 # VASP_OPT_AXIS
 An attempt to fix lattice constant for specific atoms during geometry optimization (relaxiation) proccess implemented in VASP pacakge.
 This is very efficient for 2D materials with vacumme layer added.
-Forkd from [muchong](http://muchong.com/html/201107/3427823_2.html)
+
+This project is forked from [muchong](http://muchong.com/html/201107/3427823_2.html).
 
 ## Install
 Put `cell_relax.patch` file in the root directory of your VASP distro and type:
@@ -11,13 +12,14 @@ $ patch -p0 < cell_relax.patch
 
 ## Useage
 An additional file called OPTCELL is needed for specifying which axis to fix.
+
 Note that this method is reliable only in orthorhombic lattices.
+
 OPTCELL stynax (to fix c axis):
 ```
 110
-...
 ```
-Then a regulary relaxiation with `ISIf`=3 can be performed. 
+Then a regulary relaxiation with `ISIF`=3 can be performed. 
 
 ## Caveats
 
