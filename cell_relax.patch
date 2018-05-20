@@ -1,10 +1,17 @@
 diff -ruN src/constr_cell_relax.F src_mod/constr_cell_relax.F
 --- src/constr_cell_relax.F	2017-04-20 17:03:55.000000000 +0800
-+++ src_mod/constr_cell_relax.F	2018-05-18 18:15:05.000000000 +0800
-@@ -28,6 +28,20 @@
-       USE prec
-       REAL(q) FCELL(3,3)
++++ src_mod/constr_cell_relax.F	2018-05-20 20:04:25.000000000 +0800
+@@ -25,8 +25,24 @@
+ !-----------------------------------------------------------------------
  
+       SUBROUTINE CONSTR_CELL_RELAX(FCELL)
+-      USE prec
+-      REAL(q) FCELL(3,3)
++      USE PREC
++      REAL(Q) FCELL(3,3), SAVE(3)
++      LOGICAL FILFLG
++      INTEGER ICELL(3)
++
 +     INQUIRE(FILE='OPTCELL',EXIST=FILFLG)
 +      IF (FILFLG) THEN
 +        OPEN(67,FILE='OPTCELL',FORM='FORMATTED',STATUS='OLD')
@@ -18,7 +25,6 @@ diff -ruN src/constr_cell_relax.F src_mod/constr_cell_relax.F
 +          IF (ICELL(I)==1) FCELL(I,I)=SAVE(I)
 +        ENDDO
 +      ENDIF
-+
+ 
  !     just one simple example
  !     relaxation in x directions only
- !      SAVE=FCELL(1,1)
