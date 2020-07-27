@@ -1,0 +1,76 @@
+diff --color -bruN src/constr_cell_relax.F ../vasp.5.4.4_mod/src/constr_cell_relax.F
+--- src/constr_cell_relax.F	2017-04-20 10:03:55.000000000 +0100
++++ ../vasp.5.4.4_mod/src/constr_cell_relax.F	2020-07-27 22:47:25.028165323 +0100
+@@ -24,10 +24,19 @@
+ !
+ !-----------------------------------------------------------------------
+ 
+-      SUBROUTINE CONSTR_CELL_RELAX(FCELL)
++      SUBROUTINE CONSTR_CELL_RELAX(IU5,IU0,FCELL)
+       USE prec
++      IMPLICIT NONE
+       REAL(q) FCELL(3,3)
+ 
++      INTEGER IU5,IU0
++      ! local variables
++      INTEGER IDUM, N, IERR, I, J
++      REAL(q) RDUM
++      COMPLEX(q) CDUM
++      LOGICAL LOPEN,LDUM
++      CHARACTER (1) :: CHARAC
++
+ !     just one simple example
+ !     relaxation in x directions only
+ !      SAVE=FCELL(1,1)
+@@ -38,6 +47,39 @@
+ !      FCELL=0   ! F90 style: set the whole array to zero
+ !      FCELL(3,3)=SAVE
+ 
++      LOGICAL IOPTCELL
++      INTEGER :: ICELL(9)=1
++
++      LOPEN=.FALSE.
++      OPEN(UNIT=IU5,FILE="INCAR",STATUS='OLD')
++
++      IOPTCELL=.FALSE.
++      CALL RDATAB(.FALSE.,"INCAR",IU5,'IOPTCELL','=','#',';','I', &
++     &            ICELL,RDUM,CDUM,LDUM,CHARAC,N,9,IERR)
++      IF (((IERR/=0).AND.(IERR/=3)).OR. &
++     &                    ((IERR==0).AND.(N<1))) THEN
++         IF (IU0>=0) &
++            WRITE(IU0,*)'Error reading item ''IOPTCELL'' from file INCAR.'
++         ICELL(6)=1
++      ENDIF
++
++      ! WRITE(*,*) ICELL
++      ! set logical
++      IF (ANY(ICELL .NE. (/1,1,1,1,1,1,1,1,1/) )) THEN
++         IOPTCELL=.TRUE.
++	 !IF (IU0>=0) WRITE(IU0,'(X,A,I1,I1,I1,I1,I1,I1,I1,I1,I1)') 'Constraining cell:',ICELL(1),ICELL(2),ICELL(3),ICELL(4),ICELL(5),ICELL(6),ICELL(7),ICELL(8),ICELL(9)
++	 IF (IU0>=0) WRITE(IU0,'(X,A,3I3,A,3I3,A,3I3)') 'Constraining cell:',ICELL(1:3),'  |',ICELL(4:6),'  |',ICELL(7:9)
++      ENDIF
++      CLOSE(IU5)
++
++      IF (IOPTCELL) THEN
++         DO J=1,3
++         DO I=1,3
++            IF (ICELL((I-1)*3+J)==0) FCELL(I,J)=0.0
++         ENDDO
++         ENDDO
++      ENDIF
++
+       RETURN
+       END SUBROUTINE
+ 
+diff --color -bruN src/main.F ../vasp.5.4.4_mod/src/main.F
+--- src/main.F	2017-04-20 10:03:58.000000000 +0100
++++ ../vasp.5.4.4_mod/src/main.F	2020-07-27 22:48:46.484544288 +0100
+@@ -3556,7 +3556,7 @@
+            ENDDO
+         ENDIF
+ 
+-        CALL CONSTR_CELL_RELAX(D2SIF)
++        CALL CONSTR_CELL_RELAX(IO%IU5,IO%IU0,D2SIF)
+ 
+         IF (FACTSI/=0) THEN
+            DO I=1,3
