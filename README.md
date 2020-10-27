@@ -11,7 +11,7 @@ Put `cell_relax.patch` file in the root directory of your VASP distro. and type:
 ```
 $ patch -p0 < cell_relax.patch
 ```
-### Finner version
+### Updated version
 __The finner version gives you finner control over which cell component(s) you want to relax.__
 
 Put `cell_relax_finner.patch` file in the root directory of your VASP distro. and type:
@@ -32,7 +32,7 @@ Syntax for `OPTCELL` file (fixing the `c` axis):
 ```
 Then a regular relaxation with `ISIF=3` can be performed.
 
-### Finner version
+### Updated version
 No more external file is needed. Just add `IOPTCELL` to your `INCAR` file and search for:
 ```
 Constraining cell:
@@ -55,7 +55,7 @@ __Note:__ setting components to 0 will fix those components. Any other integer m
 
 <!-- ## Caveats
 
-1. [Not sure] Because this method based on artificially eliminating ""pressure" on specified cell axis, it's reliable only for orthorhombic cells. Make sure you KNOW WHAT YOU ARE DOING! -->
+1. [Not sure] Because this method based on artificially eliminating ""pressure" on specified cell axis, it should be reliable only for orthorhombic cells. Make sure you KNOW WHAT YOU ARE DOING! -->
 
 ## Notes
 
