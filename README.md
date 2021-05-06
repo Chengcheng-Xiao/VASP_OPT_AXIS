@@ -41,17 +41,30 @@ block in your `stdout`.
 
 `IOPTCELL` syntax:
 ```
-IOPTCELL = xx xy xz yx yy yz zx zy zz
+IOPTCELL = xx yx zx xy yy zy xz yz zz
 ```
 for example:
 ```
 IOPTCELL = 1 1 0 1 1 0 0 0 0
 ```
-will relax the `xx`, `xy`, `yx` and `yy` components, while keeping the other components fixed.
+will relax the `xx`, `xy`, `yx` and `yy` components of the stress tensor, while keeping the other components fixed.
 
 Then a regular relaxation with `ISIF=3` can be performed.
 
-__Note:__ setting components to 0 will fix those components. Any other integer means that specific component will be relaxed.
+__Note:__ The lattice vectors are updated after each scf loop using the following formula (you can the following in `dyna.F`):
+
+```
+      DO J=1,3
+         DO I=1,3
+            A(I,J)=AC(I,J)
+            DO K=1,3
+               A(I,J)=A(I,J) + SSIF(I,K)*AC(K,J)*STEP
+            ENDDO
+         ENDDO
+      ENDDO
+```
+
+Where `SSIF` is the (scaled) stress tensor (e.g. SSIF(I,J) = IOPTCELL((J-1)*3+I), fortran use Column-major), `A` is the lattice vector matrix and `STEP` is the step size.
 
 <!-- ## Caveats
 
