@@ -1,0 +1,169 @@
+diff -ru src/constr_cell_relax.F ../../vasp.5.4.4/src/constr_cell_relax.F
+--- src/constr_cell_relax.F	2017-04-20 10:03:55.000000000 +0100
++++ ../../vasp.5.4.4/src/constr_cell_relax.F	2021-05-06 14:37:13.460464000 +0100
+@@ -24,20 +24,59 @@
+ !
+ !-----------------------------------------------------------------------
+ 
+-      SUBROUTINE CONSTR_CELL_RELAX(FCELL)
++      SUBROUTINE CONSTR_CELL_RELAX(IU5,IU0,FCELL)
+       USE prec
++      IMPLICIT NONE
+       REAL(q) FCELL(3,3)
+ 
+-!     just one simple example
+-!     relaxation in x directions only
+-!      SAVE=FCELL(1,1)
+-!      FCELL=0   ! F90 style: set the whole array to zero
+-!      FCELL(1,1)=SAVE
+-!     relaxation in z direction only
+-!      SAVE=FCELL(3,3)
+-!      FCELL=0   ! F90 style: set the whole array to zero
+-!      FCELL(3,3)=SAVE
++      INTEGER IU5,IU0
++      ! local variables
++      INTEGER N, IERR, I, J
++      REAL(q) RDUM
++      COMPLEX(q) CDUM
++      LOGICAL LDUM
++      CHARACTER (1) :: CHARAC
++
++      LOGICAL IOPTCELL
++      INTEGER :: ICELL(9)=1, IST(9)=1
++
++      OPEN(UNIT=IU5,FILE="INCAR",STATUS='OLD')
++
++      IOPTCELL=.FALSE.
++      CALL RDATAB(.FALSE.,"INCAR",IU5,'IOPTCELL','=','#',';','I', &
++     &            ICELL,RDUM,CDUM,LDUM,CHARAC,N,9,IERR)
++      IF (((IERR/=0).AND.(IERR/=3)).OR. &
++     &                    ((IERR==0).AND.(N<1))) THEN
++         IF (IU0>=0) &
++            WRITE(IU0,*)'Error reading item ''IOPTCELL'' from file INCAR.'
++         ICELL(6)=1
++      ENDIF
++
++      ! WRITE(*,*) ICELL
++      ! set logical
++      IF (ANY(ICELL .NE. (/1,1,1,1,1,1,1,1,1/) )) THEN
++         IOPTCELL=.TRUE.
++      ENDIF
++      CLOSE(IU5)
++
++      ! IF (IU0>=0) WRITE(IU0,*) 'stress:', FCELL(1,2)
++      IF (IOPTCELL) THEN
++         DO I=1,3
++           ! only change stress tensor to zero if we are fixing
++           ! say for example x components of all lattice vectors.
++            IF (ICELL(0+I)==0 .AND. ICELL(3+I)==0 .AND. ICELL(6+I)==0) THEN
++              IST(0+I)=0
++              IST(3+I)=0
++              IST(6+I)=0
++              FCELL(I,1)=0.0
++              FCELL(I,2)=0.0
++              FCELL(I,3)=0.0
++            ENDIF
++         ENDDO
++	 ! '(X,A,3I3,A,3I3,A,3I3)'
++         IF (IU0>=0) WRITE(IU0,'(X,A,3I3,A,3I3,A,3I3)') 'Constraining stress:',&
++         & IST(1:3), '  |', IST(4:6), '  |', IST(7:9)
++      ENDIF
+ 
+       RETURN
+       END SUBROUTINE
+-
+diff -ru src/dyna.F ../../vasp.5.4.4/src/dyna.F
+--- src/dyna.F	2017-04-20 10:03:56.000000000 +0100
++++ ../../vasp.5.4.4/src/dyna.F	2021-05-07 08:04:02.912253000 +0100
+@@ -561,7 +561,7 @@
+ !*********************************************************************
+ 
+       SUBROUTINE IONCGR(IFLAG,NIONS,TOTEN,A,B,NFREE,POSION,POSIOC, &
+-     &      FACT,F,FACTSI,FSIF,FL,S,DISMAX,IU6,IU0, &
++     &      FACT,F,FACTSI,FSIF,FL,S,DISMAX,IU5,IU6,IU0, &
+      &      EBREAK,EDIFFG,E1TEST,LSTOP2)
+       USE prec
+       USE lattice
+@@ -586,6 +586,39 @@
+       DATA ICOUNT/0/, ICOUNT2/0/, STEP /1._q/,SNORM/1E-10_q/
+       DATA LTRIAL/.FALSE./
+ 
++      ! CCX: add to fix cell
++      ! local variables
++      INTEGER IERR
++      REAL(q) RDUM
++      COMPLEX(q) CDUM
++      LOGICAL LDUM
++      CHARACTER (1) :: CHARAC
++
++      LOGICAL IOPTCELL
++      INTEGER :: ICELL(9)=1
++
++      OPEN(UNIT=IU5,FILE="INCAR",STATUS='OLD')
++
++      IOPTCELL=.FALSE.
++      CALL RDATAB(.FALSE.,"INCAR",IU5,'IOPTCELL','=','#',';','I', &
++     &            ICELL,RDUM,CDUM,LDUM,CHARAC,N,9,IERR)
++      IF (((IERR/=0).AND.(IERR/=3)).OR. &
++     &                    ((IERR==0).AND.(N<1))) THEN
++         IF (IU0>=0) &
++            WRITE(IU0,*)'Error reading item ''IOPTCELL'' from file INCAR.'
++         ICELL(6)=1
++      ENDIF
++
++      IF (ANY(ICELL .NE. (/1,1,1,1,1,1,1,1,1/) )) THEN
++         IOPTCELL=.TRUE.
++         IF (IU0>=0) WRITE(IU0,'(X,A,3I3,A,3I3,A,3I3)') 'Constraining cell  :',&
++        &ICELL(1:3),'  |',ICELL(4:6),'  |',ICELL(7:9)
++      ENDIF
++      CLOSE(IU5)
++      ! CCX: end modification
++
++
++
+ !=======================================================================
+ !  if IFLAG =0 initialize everything
+ !=======================================================================
+@@ -805,6 +838,10 @@
+             DO K=1,3
+                A(I,J)=A(I,J) + SSIF(I,K)*AC(K,J)*STEP
+             ENDDO
++            ! CCX: modify to fix lattice elements
++            IF (ICELL((J-1)*3+I)==0) A(I,J)=AC(I,J)
++            ! IF (IU0>=0) WRITE(IU0,*) I, ' ', J, ' ', SSIF(I,J) 
++	    ! IF (IU0>=0) WRITE(IU0,*) 'doing something'
+          ENDDO
+       ENDDO
+ 
+@@ -951,6 +988,10 @@
+       DO K=1,3
+         A(I,J)=A(I,J) + SSIF(I,K)*AC(K,J)*DMOVE*STEP
+       ENDDO
++      ! CCX: modify to fix lattice elements
++      IF (ICELL((J-1)*3+I)==0) A(I,J)=AC(I,J)
++      ! IF (IU0>=0) WRITE(IU0,*) I, ' ', J, ' ', AC(I,J), A(I,J), SSIF(I,J)
++      ! IF (IU0>=0) WRITE(IU0,*) 'doing something'
+       ENDDO
+       ENDDO
+       DMOVEL=DMOVE
+diff -ru src/main.F ../../vasp.5.4.4/src/main.F
+--- src/main.F	2017-04-20 10:03:58.000000000 +0100
++++ ../../vasp.5.4.4/src/main.F	2021-05-05 23:49:36.649065000 +0100
+@@ -3556,7 +3556,7 @@
+            ENDDO
+         ENDIF
+ 
+-        CALL CONSTR_CELL_RELAX(D2SIF)
++        CALL CONSTR_CELL_RELAX(IO%IU5,IO%IU0,D2SIF)
+ 
+         IF (FACTSI/=0) THEN
+            DO I=1,3
+@@ -3613,7 +3613,7 @@
+            IF ( LHYPER_NUDGE() ) EACC=1E10    ! energy not very accurate, use only force
+ 
+            CALL IONCGR(IFLAG,T_INFO%NIONS,TOTEN,LATT_CUR%A,LATT_CUR%B,DYN%NFREE,DYN%POSION,DYN%POSIOC, &
+-                FACT,DYN%D2C,FACTSI,D2SIF,DYN%D2,DYN%D3,DISMAX,IO%IU6,IO%IU0, &
++                FACT,DYN%D2C,FACTSI,D2SIF,DYN%D2,DYN%D3,DISMAX,IO%IU5,IO%IU6,IO%IU0, &
+                 EACC,DYN%EDIFFG,E1TEST,LSTOP2)
+ !    if IFLAG=1 new trial step -> reinit of waveprediction
+            INFO%LSTOP=.FALSE.

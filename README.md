@@ -1,57 +1,9 @@
 # VASP_OPT_AXIS
-This project provides patches enabling the ability to fix lattice component(s) during relaxation in VASP.
+This project provides patches enabling the ability to fix lattice vector component(s)/stress tensor component(s) during relaxation in VASP.
 
-This project is forked from [muchong](http://muchong.com/html/201107/3427823_2.html) and modified upon.
-
-## Install
-### Original version
-__The original version allows you to control which vector(s) to relax.__
-
-Put `cell_relax.patch` file in the root directory of your VASP distro. and type:
-```
-$ patch -p0 < cell_relax.patch
-```
-### Updated version
-__The finner version gives you finner control over which cell component(s) you want to relax.__
-
-Put `cell_relax_finner.patch` file in the root directory of your VASP distro. and type:
-```
-$ patch -p0 < cell_relax_finner.patch
-```
-
-
-## Usage
-### Original version
-An additional file called `OPTCELL` is needed to specify which axis we want fix.
-
-Note that this method is reliable only for orthorhombic lattices.
-
-Syntax for `OPTCELL` file (fixing the `c` axis):
-```
-110
-```
-Then a regular relaxation with `ISIF=3` can be performed.
-
-### Updated version
-No more external file is needed. Just add `IOPTCELL` to your `INCAR` file and search for:
-```
-Constraining cell:
-```
-block in your `stdout`.
-
-`IOPTCELL` syntax:
-```
-IOPTCELL = xx yx zx xy yy zy xz yz zz
-```
-for example:
-```
-IOPTCELL = 1 1 0 1 1 0 0 0 0
-```
-will relax the `xx`, `xy`, `yx` and `yy` components of the stress tensor, while keeping the other components fixed.
-
-Then a regular relaxation with `ISIF=3` can be performed.
-
-__Note:__ The lattice vectors are updated after each scf loop using the following formula (you can the following in `dyna.F`):
+## Stress tensor method
+This method is forked from [muchong](http://muchong.com/html/201107/3427823_2.html) and modified upon.
+The lattice vectors are updated after each SCF loop by following formula (you can find codes similar to the following in `dyna.F`):
 
 ```
       DO J=1,3
@@ -64,14 +16,89 @@ __Note:__ The lattice vectors are updated after each scf loop using the followin
       ENDDO
 ```
 
-Where `SSIF` is the (scaled) stress tensor (e.g. SSIF(I,J) = IOPTCELL((J-1)*3+I), fortran use Column-major), `A` is the lattice vector matrix and `STEP` is the step size.
+Where `SSIF` is the (scaled) stress tensor (note that fortran uses Column-major order), `A` is the lattice vector matrix and `STEP` is the step size.
 
-<!-- ## Caveats
+__This means that fixing the stress tensor elements does not necessarily fix the corresponding lattice components.__
 
-1. [Not sure] Because this method based on artificially eliminating ""pressure" on specified cell axis, it should be reliable only for orthorhombic cells. Make sure you KNOW WHAT YOU ARE DOING! -->
+### Fixing only the diagonal term
 
-## Notes
+Put `stress_relax.patch` file in the root directory of your VASP distro. and type:
+```
+$ patch -p0 < stress_relax.patch
+```
+and recompile VASP.
+
+This patch lets VASP read a file called `OPTCELL` after each SCF loop and use the info inside to determine which diagonal stress component(s) to fix.
+
+`OPTCELL` file format:
+
+```
+xx yy zz
+```
+
+e.g.
+```
+1 1 0
+```
+will fix `zz` component of the stress tensor.
+
+Note that for this patch we can only fix the diagonal stress tensor element(s) so it's better suited for orthorhombic cell or at least lattice vector that is perpendicular to other lattice vectors.
+
+Also note that `ISIF=3` is needed for lattice relaxation.
+
+### Fixing specific stress tensor element(s)
+
+Put `stress_relax_finner.patch` file in the root directory of your VASP distro. and type:
+```
+$ patch -p0 < stress_relax_finner.patch
+```
+and recompile VASP.
+
+This patch lets VASP read `IOPTCELL` tag directly from `INCAR`.
+
+`IOPTCELL` format:
+
+```
+IOPTCELL = xx yx zx xy yy zy xz yz zz
+```
+for example:
+```
+IOPTCELL = 1 1 0 1 1 0 0 0 0
+```
+will relax the `xx`, `xy`, `yx` and `yy` components of the stress tensor, while keeping the other components fixed.
+
+## Direct fixing of the lattice method
+__WARNINIG: this method only works with `IBRION=2` and may induce numerical instabilities.__
+This patch enables direct fixing of the lattice.
+
+This is achieved by re-assigning the original value of the lattice elements after each geometry updates of the conjugate gradient step. (modification made in `dyna.F`)
+
+Also, the stress tensor is modified to reduce instabilities introduced by direct fixing. (modification made in `constr_cell_relax.F`).
+
+To use this method:
+
+Put `cell_relax.patch` file in the root directory of your VASP distro. and type:
+```
+$ patch -p0 < cell_relax.patch
+```
+and recompile VASP.
+
+This patch lets VASP read `IOPTCELL` tag directly from `INCAR`.
+
+`IOPTCELL` format:
+
+```
+IOPTCELL = xx xy xz yx yy yz zx zy zz
+```
+for example:
+```
+IOPTCELL = 1 1 0 1 1 0 0 0 0
+```
+will relax the `xx`, `xy`, `yx` and `yy` components of the lattice matrix, while keeping the other components fixed.
+It will also fix the `xz`, `yz` and `zz` components of the stress tensor.
+
+## Disclaimer
 
 *1. VASP is a commercial package, be sure you have a proper license to use it.
 
-*2. The correctness of this patch has been checked with few simple cases. However, this is not guaranteed to work for your specific case. Make sure you KNOW WHAT YOU ARE DOING!
+*2. The correctness of this patch has been checked with few simple cases. However, this is not guaranteed to work for your specific system. Make sure you KNOW WHAT YOU ARE DOING!
