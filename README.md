@@ -1,8 +1,11 @@
-# VASP_OPT_AXIS
+# VASP OPT AXIS
 This project provides patches enabling the ability to fix lattice vector component(s)/stress tensor component(s) during relaxation in VASP.
+
+__PLEASE READ THROUGH THIS FILE BEFORE PROCEED__
 
 ## Stress tensor method
 This method is forked from [muchong](http://muchong.com/html/201107/3427823_2.html) and modified upon.
+
 The lattice vectors are updated after each SCF loop by following formula (you can find codes similar to the following in `dyna.F`):
 
 ```
@@ -18,7 +21,7 @@ The lattice vectors are updated after each SCF loop by following formula (you ca
 
 Where `SSIF` is the (scaled) stress tensor (note that fortran uses Column-major order), `A` is the lattice vector matrix and `STEP` is the step size.
 
-__This means that fixing the stress tensor elements does not necessarily fix the corresponding lattice components.__
+__NOTE: This means that fixing the stress tensor elements does not necessarily fix the corresponding lattice components.__
 
 ### Fixing only the diagonal term
 
@@ -36,7 +39,7 @@ This patch lets VASP read a file called `OPTCELL` after each SCF loop and use th
 xx yy zz
 ```
 
-e.g.
+For example:
 ```
 1 1 0
 ```
@@ -69,6 +72,7 @@ will relax the `xx`, `xy`, `yx` and `yy` components of the stress tensor, while 
 
 ## Direct fixing of the lattice method
 __WARNINIG: this method only works with `IBRION=2` and may induce numerical instabilities.__
+
 This patch enables direct fixing of the lattice.
 
 This is achieved by re-assigning the original value of the lattice elements after each geometry updates of the conjugate gradient step. (modification made in `dyna.F`)
