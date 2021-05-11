@@ -68,7 +68,7 @@ for example:
 ```
 IOPTCELL = 1 1 0 1 1 0 0 0 0
 ```
-will relax the `xx`, `xy`, `yx` and `yy` components of the stress tensor, while keeping the other components fixed.
+will relax the `xx`, `xy`, `yx` and `yy` components of the stress tensor, while keeping the other components fixed (to zero).
 
 ## Direct fixing of the lattice method
 __WARNINIG: this method only works with `IBRION=2` and may induce numerical instabilities.__
