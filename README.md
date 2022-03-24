@@ -99,7 +99,7 @@ for example:
 IOPTCELL = 1 1 0 1 1 0 0 0 0
 ```
 will relax the `xx`, `xy`, `yx` and `yy` components of the lattice matrix, while keeping the other components fixed.
-It will also fix the `xz`, `yz` and `zz` components of the stress tensor.
+It will also fix the `xz`, `yz`, `zx`, `zy` and `zz` components of the stress tensor.
 
 ## Disclaimer
 
