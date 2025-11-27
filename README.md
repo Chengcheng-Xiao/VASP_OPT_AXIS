@@ -62,7 +62,7 @@ This patch lets VASP read `IOPTCELL` tag directly from `INCAR`.
 `IOPTCELL` format:
 
 ```
-IOPTCELL = xx yx zx xy yy zy xz yz zz
+IOPTCELL = xx xy xz yx yy yz zx zy zz
 ```
 for example:
 ```
